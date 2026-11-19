@@ -93,9 +93,10 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
               <span>PDF, DOCX, TXT &amp; Screenshots</span>
             </div>
 
-            <h1 className="font-[family-name:var(--font-display)] text-4xl sm:text-5xl font-semibold tracking-tight text-[#18181B] leading-[1.08] [text-wrap:balance]">
-              Your resume, torn to shreds with{' '}
-              <span className="italic text-[#DC2626]">editorial precision.</span>
+            <h1 className="font-[family-name:var(--font-display)] text-3xl sm:text-[2.75rem] font-semibold tracking-tight text-[#18181B] leading-[1.12] [text-wrap:balance]">
+              No sugarcoating—just a{' '}
+              <span className="italic text-[#DC2626]">sharp, line-by-line review</span>{' '}
+              of your resume.
             </h1>
 
             <p className="text-base text-[#52525B] leading-relaxed max-w-xl">
