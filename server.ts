@@ -160,6 +160,68 @@ function normalizeHeat(raw: unknown): HeatLevel {
   return 'medium';
 }
 
+function isTransientDemandError(err: unknown): boolean {
+  const raw = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return (
+    raw.includes('503') ||
+    raw.includes('unavailable') ||
+    raw.includes('high demand') ||
+    raw.includes('overloaded') ||
+    raw.includes('deadline_exceeded')
+  );
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function generateRoastWithFallback(
+  ai: GoogleGenAI,
+  parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }>,
+) {
+  const primaryModel = process.env.GEMINI_MODEL || 'gemini-4-hydrogen';
+  const systemInstruction =
+    'You are the chief comedy editor and veteran executive recruiter at Roast me., a satirical career publication famous for mercilessly funny, hyper-specific resume roasts paired with genuinely elite career fixes.';
+
+  const attempts: Array<{ model: string; useThinking: boolean; delayBeforeMs: number }> = [
+    { model: primaryModel, useThinking: true, delayBeforeMs: 0 },
+    { model: primaryModel, useThinking: true, delayBeforeMs: 1200 },
+  ];
+
+  if (primaryModel !== 'gemini-3.1-flash-lite') {
+    attempts.push(
+      { model: 'gemini-3.1-flash-lite', useThinking: false, delayBeforeMs: 400 },
+      { model: 'gemini-3.1-flash-lite', useThinking: false, delayBeforeMs: 1500 },
+    );
+  }
+
+  let lastError: unknown;
+  for (const attempt of attempts) {
+    if (attempt.delayBeforeMs > 0) {
+      await sleep(attempt.delayBeforeMs);
+    }
+    try {
+      return await ai.models.generateContent({
+        model: attempt.model,
+        contents: { parts },
+        config: {
+          systemInstruction,
+          responseMimeType: 'application/json',
+          responseSchema: roastResponseSchema,
+          ...(attempt.useThinking ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {}),
+        },
+      });
+    } catch (err) {
+      lastError = err;
+      if (!isTransientDemandError(err)) {
+        throw err;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 function getFriendlyErrorMessage(err: unknown): { status: number; message: string } {
   const rawMessage = err instanceof Error ? err.message : String(err);
   const lower = rawMessage.toLowerCase();
@@ -182,6 +244,26 @@ function getFriendlyErrorMessage(err: unknown): { status: number; message: strin
       message: 'Rate limit reached on the Gemini API. Please wait a moment and try roasting again.',
     };
   }
+  if (isTransientDemandError(err)) {
+    return {
+      status: 503,
+      message:
+        'Google’s Gemini API is experiencing a temporary spike in demand right now. We retried automatically—please wait a few seconds and click Roast Me again.',
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(rawMessage);
+    if (parsed?.error?.message) {
+      return {
+        status: Number(parsed.error.code) || 500,
+        message: String(parsed.error.message),
+      };
+    }
+  } catch {
+    // Raw message is plain text
+  }
+
   return {
     status: 500,
     message: rawMessage || 'Failed to roast the resume. Please try again.',
@@ -300,17 +382,7 @@ async function startServer() {
       parts.push({ text: promptInstruction });
 
       const ai = getGenAIClient();
-      const response = await ai.models.generateContent({
-        model: 'gemini-4-hydrogen',
-        contents: { parts },
-        config: {
-          systemInstruction:
-            'You are the chief comedy editor and veteran executive recruiter at Roast me., a satirical career publication famous for mercilessly funny, hyper-specific resume roasts paired with genuinely elite career fixes.',
-          responseMimeType: 'application/json',
-          responseSchema: roastResponseSchema,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        },
-      });
+      const response = await generateRoastWithFallback(ai, parts);
 
       const rawJson = (response.text ?? '').trim();
       if (!rawJson) {
