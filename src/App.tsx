@@ -51,6 +51,16 @@ export default function App() {
 
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
+        if (response.status === 413) {
+          throw new Error(
+            'This file exceeds the 4.5 MB serverless upload limit on Vercel. Compress the PDF under 4.5 MB or switch to the Paste Text tab.',
+          );
+        }
+        if (response.status === 404 && !payload?.error) {
+          throw new Error(
+            'The /api/roast backend endpoint was not found (404). Make sure the /api serverless functions are deployed.',
+          );
+        }
         throw new Error(payload?.error || `Request failed with status ${response.status}`);
       }
 
