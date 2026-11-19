@@ -1,0 +1,6 @@
+{
+  "name": "RedInk — Resume Roaster",
+  "description": "Upload your resume for a sharp, genuinely funny editorial roast and actionable line-by-line fixes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
