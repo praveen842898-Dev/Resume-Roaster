@@ -4,6 +4,15 @@ import multer from 'multer';
 import mammoth from 'mammoth';
 import { GoogleGenAI, ThinkingLevel, Type } from '@google/genai';
 
+export const maxDuration = 60;
+
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+  maxDuration: 60,
+};
+
 type HeatLevel = 'mild' | 'medium' | 'crispy';
 
 const HEAT_INSTRUCTIONS: Record<HeatLevel, string> = {
@@ -159,8 +168,28 @@ function isTransientDemandError(err: unknown): boolean {
     raw.includes('unavailable') ||
     raw.includes('high demand') ||
     raw.includes('overloaded') ||
-    raw.includes('deadline_exceeded')
+    raw.includes('deadline_exceeded') ||
+    raw.includes('timed out') ||
+    raw.includes('timeout')
   );
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
 }
 
 function sleep(ms: number): Promise<void> {
@@ -173,18 +202,19 @@ async function generateRoastWithFallback(
 ) {
   const primaryModel = process.env.GEMINI_MODEL || 'gemini-4-hydrogen';
   const systemInstruction =
-    'You are the chief comedy editor and veteran executive recruiter at Roast me., a satirical career publication famous for mercilessly funny, hyper-specific resume roasts paired with genuinely elite career fixes.';
+    'You are the chief comedy editor and veteran executive recruiter at Roast me., a satirical career publication famous for mercilessly funny, hyper-specific resume roasts paired with genuinely elite career fixes. Keep every paragraph, roast, and fix crisp, punchy, and concise (1-2 sentences per item).';
 
-  const attempts: Array<{ model: string; useThinking: boolean; delayBeforeMs: number }> = [
-    { model: primaryModel, useThinking: true, delayBeforeMs: 0 },
-    { model: primaryModel, useThinking: true, delayBeforeMs: 1200 },
+  const attempts: Array<{ model: string; useThinking: boolean; timeoutMs: number; delayBeforeMs: number }> = [
+    { model: primaryModel, useThinking: true, timeoutMs: 14000, delayBeforeMs: 0 },
   ];
 
   if (primaryModel !== 'gemini-3.1-flash-lite') {
     attempts.push(
-      { model: 'gemini-3.1-flash-lite', useThinking: false, delayBeforeMs: 400 },
-      { model: 'gemini-3.1-flash-lite', useThinking: false, delayBeforeMs: 1500 },
+      { model: 'gemini-3.1-flash-lite', useThinking: false, timeoutMs: 18000, delayBeforeMs: 250 },
+      { model: 'gemini-3.1-flash-lite', useThinking: false, timeoutMs: 18000, delayBeforeMs: 800 },
     );
+  } else {
+    attempts.push({ model: primaryModel, useThinking: false, timeoutMs: 18000, delayBeforeMs: 800 });
   }
 
   let lastError: unknown;
@@ -193,16 +223,20 @@ async function generateRoastWithFallback(
       await sleep(attempt.delayBeforeMs);
     }
     try {
-      return await ai.models.generateContent({
-        model: attempt.model,
-        contents: { parts },
-        config: {
-          systemInstruction,
-          responseMimeType: 'application/json',
-          responseSchema: roastResponseSchema,
-          ...(attempt.useThinking ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {}),
-        },
-      });
+      return await withTimeout(
+        ai.models.generateContent({
+          model: attempt.model,
+          contents: { parts },
+          config: {
+            systemInstruction,
+            responseMimeType: 'application/json',
+            responseSchema: roastResponseSchema,
+            ...(attempt.useThinking ? { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } } : {}),
+          },
+        }),
+        attempt.timeoutMs,
+        attempt.model,
+      );
     } catch (err) {
       lastError = err;
       if (!isTransientDemandError(err)) {
@@ -266,9 +300,10 @@ function getFriendlyErrorMessage(err: unknown): { status: number; message: strin
 
 const app = express();
 
-// Avoid re-reading the stream if Vercel already parsed JSON into req.body
+// Only parse JSON requests; never touch req.body on multipart/form-data so multer receives the raw stream
 app.use((req: Request, res: Response, next: NextFunction) => {
-  if (req.body && typeof req.body === 'object' && Object.keys(req.body).length > 0) {
+  const contentType = (req.headers['content-type'] || '').toLowerCase();
+  if (!contentType.includes('application/json') || req.readableEnded) {
     next();
     return;
   }

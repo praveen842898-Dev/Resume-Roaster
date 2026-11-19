@@ -56,6 +56,11 @@ export default function App() {
             'This file exceeds the 4.5 MB serverless upload limit on Vercel. Compress the PDF under 4.5 MB or switch to the Paste Text tab.',
           );
         }
+        if (response.status === 504) {
+          throw new Error(
+            'The server timed out while analyzing your resume (504). Please click Roast Me again, or paste your resume text for an even faster roast.',
+          );
+        }
         if (response.status === 404 && !payload?.error) {
           throw new Error(
             'The /api/roast backend endpoint was not found (404). Make sure the /api serverless functions are deployed.',
