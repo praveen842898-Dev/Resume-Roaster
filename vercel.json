@@ -6,7 +6,7 @@
   },
   "rewrites": [
     {
-      "source": "/((?!api/|assets/|src/assets/).*)",
+      "source": "/((?!api/|assets/|src/assets/|logo\\.png|favicon\\.png|apple-touch-icon\\.png).*)",
       "destination": "/index.html"
     }
   ]

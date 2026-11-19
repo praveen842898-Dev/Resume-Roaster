@@ -139,7 +139,7 @@ const roastResponseSchema = {
 };
 
 function getGenAIClient(): GoogleGenAI {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey || apiKey.trim() === '' || apiKey === 'MY_GEMINI_API_KEY') {
     throw new Error('GEMINI_API_KEY is not configured on the server.');
   }

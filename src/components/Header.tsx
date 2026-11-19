@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface HeaderProps {
   hasResult: boolean;
@@ -6,15 +6,30 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ hasResult, onResetToUpload }) => {
+  const [logoFailed, setLogoFailed] = useState(false);
+
   return (
     <header className="border-b border-[#E5DFD3] bg-[#FBF9F5]/95 backdrop-blur-sm sticky top-0 z-30">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between gap-8">
         <button
           type="button"
           onClick={onResetToUpload}
-          className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight text-[#18181B] whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] rounded-sm"
+          aria-label="Roast me. — Home"
+          className="flex items-center whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#DC2626] rounded-sm"
         >
-          RedInk
+          {!logoFailed ? (
+            <img
+              src="/logo.png"
+              alt="Roast me."
+              referrerPolicy="no-referrer"
+              onError={() => setLogoFailed(true)}
+              className="h-9 sm:h-10 w-auto object-contain select-none"
+            />
+          ) : (
+            <span className="font-[family-name:var(--font-display)] text-2xl font-bold tracking-tight text-[#18181B]">
+              Roast me.
+            </span>
+          )}
         </button>
 
         <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-[#52525B]">
