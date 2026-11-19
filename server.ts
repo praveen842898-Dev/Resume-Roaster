@@ -65,7 +65,7 @@ const roastResponseSchema = {
     openingMonologue: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
-      description: '2 to 3 laugh-out-loud funny paragraphs roasting specific details, tools, jobs, or claims actually in the resume.',
+      description: '2 short, laugh-out-loud funny paragraphs roasting specific details actually in the resume.',
     },
     pullQuote: {
       type: Type.STRING,
@@ -77,13 +77,13 @@ const roastResponseSchema = {
         type: Type.OBJECT,
         properties: {
           section: { type: Type.STRING, description: 'Resume section name (e.g. Summary, Experience, Skills).' },
-          originalSnippet: { type: Type.STRING, description: 'Exact or closely quoted snippet from the resume.' },
-          roast: { type: Type.STRING, description: 'Funny, specific critique of that exact line.' },
-          actualFix: { type: Type.STRING, description: 'A concrete, high-impact rewritten version or actionable improvement.' },
+          originalSnippet: { type: Type.STRING, description: 'Short quoted snippet from the resume.' },
+          roast: { type: Type.STRING, description: 'Funny 1-sentence critique of that exact line.' },
+          actualFix: { type: Type.STRING, description: 'Concise 1-sentence rewritten version or fix.' },
         },
         required: ['section', 'originalSnippet', 'roast', 'actualFix'],
       },
-      description: '4 to 5 specific snippets pulled from the resume with their roast and real fix.',
+      description: '3 to 4 sharpest snippets pulled from the resume with their roast and real fix.',
     },
     buzzwordAudit: {
       type: Type.ARRAY,
@@ -96,19 +96,19 @@ const roastResponseSchema = {
         },
         required: ['phrase', 'count', 'verdict'],
       },
-      description: '3 to 6 buzzwords, clichés, or suspiciously vague claims spotted in the resume.',
+      description: '3 to 4 buzzwords, clichés, or vague claims spotted in the resume.',
     },
     redFlags: {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
         properties: {
-          title: { type: Type.STRING, description: 'Short 3-6 word red flag title.' },
-          detail: { type: Type.STRING, description: '1-2 sentences explaining why a hiring manager would pause here, with dry humor.' },
+          title: { type: Type.STRING, description: 'Short 3-5 word red flag title.' },
+          detail: { type: Type.STRING, description: '1 crisp sentence explaining why a hiring manager pauses here, with dry humor.' },
         },
         required: ['title', 'detail'],
       },
-      description: '3 to 4 hiring-manager red flags observed in this resume.',
+      description: '3 hiring-manager red flags observed in this resume.',
     },
     salvagePlan: {
       type: Type.ARRAY,
@@ -116,7 +116,7 @@ const roastResponseSchema = {
         type: Type.OBJECT,
         properties: {
           stepTitle: { type: Type.STRING, description: 'Concise action headline.' },
-          action: { type: Type.STRING, description: 'Specific, practical edit the candidate should make today.' },
+          action: { type: Type.STRING, description: '1 crisp, practical edit the candidate should make today.' },
         },
         required: ['stepTitle', 'action'],
       },
@@ -199,22 +199,18 @@ async function generateRoastWithFallback(
   ai: GoogleGenAI,
   parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }>,
 ) {
-  const primaryModel = process.env.GEMINI_MODEL || 'gemini-4-hydrogen';
+  const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
   const systemInstruction =
-    'You are the chief comedy editor and veteran executive recruiter at Roast me., a satirical career publication famous for mercilessly funny, hyper-specific resume roasts paired with genuinely elite career fixes. Keep every paragraph, roast, and fix crisp, punchy, and concise (1-2 sentences per item).';
+    'You are the chief comedy editor and veteran executive recruiter at Roast me., a satirical career publication famous for mercilessly funny, hyper-specific resume roasts paired with genuinely elite career fixes. Keep every paragraph, roast, and fix razor-sharp and concise (1-2 sentences max per item).';
 
+  const isPrimaryFlashLite = primaryModel === 'gemini-3.1-flash-lite';
   const attempts: Array<{ model: string; useThinking: boolean; timeoutMs: number; delayBeforeMs: number }> = [
-    { model: primaryModel, useThinking: true, timeoutMs: 14000, delayBeforeMs: 0 },
+    { model: primaryModel, useThinking: !isPrimaryFlashLite, timeoutMs: 14000, delayBeforeMs: 0 },
+    isPrimaryFlashLite
+      ? { model: 'gemini-4-hydrogen', useThinking: true, timeoutMs: 16000, delayBeforeMs: 250 }
+      : { model: 'gemini-3.1-flash-lite', useThinking: false, timeoutMs: 16000, delayBeforeMs: 250 },
+    { model: 'gemini-3.1-flash-lite', useThinking: false, timeoutMs: 16000, delayBeforeMs: 700 },
   ];
-
-  if (primaryModel !== 'gemini-3.1-flash-lite') {
-    attempts.push(
-      { model: 'gemini-3.1-flash-lite', useThinking: false, timeoutMs: 18000, delayBeforeMs: 250 },
-      { model: 'gemini-3.1-flash-lite', useThinking: false, timeoutMs: 18000, delayBeforeMs: 800 },
-    );
-  } else {
-    attempts.push({ model: primaryModel, useThinking: false, timeoutMs: 18000, delayBeforeMs: 800 });
-  }
 
   let lastError: unknown;
   for (const attempt of attempts) {
