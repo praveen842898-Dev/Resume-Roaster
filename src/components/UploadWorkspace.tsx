@@ -359,13 +359,13 @@ export const UploadWorkspace: React.FC<UploadWorkspaceProps> = ({
                 <div className="w-full h-full min-h-[280px] flex flex-col items-center justify-center p-8 text-center bg-gradient-to-br from-[#EFEAE0] to-[#E5DFD3]">
                   <FileText className="w-10 h-10 text-[#DC2626] mb-3" aria-hidden="true" />
                   <p className="font-[family-name:var(--font-display)] text-lg text-[#18181B]">
-                    RedInk Critique Desk
+                    Roast me. Critique Desk
                   </p>
                 </div>
               )}
             </div>
             <p className="mt-2.5 text-xs italic text-[#71717A] font-[family-name:var(--font-display)]">
-              Fig. 1 — Standard Tuesday afternoon at the RedInk editorial critique desk.
+              Fig. 1 — Standard Tuesday afternoon at the Roast me. editorial critique desk.
             </p>
           </div>
 

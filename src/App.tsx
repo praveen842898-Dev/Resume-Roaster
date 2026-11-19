@@ -136,7 +136,7 @@ export default function App() {
 
       <footer className="border-t border-[#E5DFD3] py-8 mt-auto">
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#71717A]">
-          <span>RedInk Editorial Critique — Built to bruise egos and improve callback rates.</span>
+          <span>Roast me. Editorial Critique — Built to bruise egos and improve callback rates.</span>
           <span>Uploaded resumes are processed in memory and never stored.</span>
         </div>
       </footer>

@@ -303,7 +303,7 @@ app.post(['/api/roast', '/'], upload.single('resume'), async (req: Request, res:
       contents: { parts },
       config: {
         systemInstruction:
-          'You are the chief comedy editor and veteran executive recruiter at RedInk, a satirical career publication famous for mercilessly funny, hyper-specific resume roasts paired with genuinely elite career fixes.',
+          'You are the chief comedy editor and veteran executive recruiter at Roast me., a satirical career publication famous for mercilessly funny, hyper-specific resume roasts paired with genuinely elite career fixes.',
         responseMimeType: 'application/json',
         responseSchema: roastResponseSchema,
         thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },

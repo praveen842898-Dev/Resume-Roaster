@@ -305,7 +305,7 @@ async function startServer() {
         contents: { parts },
         config: {
           systemInstruction:
-            'You are the chief comedy editor and veteran executive recruiter at RedInk, a satirical career publication famous for mercilessly funny, hyper-specific resume roasts paired with genuinely elite career fixes.',
+            'You are the chief comedy editor and veteran executive recruiter at Roast me., a satirical career publication famous for mercilessly funny, hyper-specific resume roasts paired with genuinely elite career fixes.',
           responseMimeType: 'application/json',
           responseSchema: roastResponseSchema,
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
@@ -358,7 +358,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`RedInk Resume Roaster listening on http://localhost:${PORT}`);
+    console.log(`Roast me. Resume Roaster listening on http://localhost:${PORT}`);
   });
 }
 
